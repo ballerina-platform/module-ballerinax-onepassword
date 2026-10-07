@@ -1,0 +1,2046 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "1Password Connect",
+    "description": "REST API interface for 1Password Connect.",
+    "contact": {
+      "name": "1Password Integrations",
+      "url": "https://support.1password.com/",
+      "email": "support@1password.com"
+    },
+    "version": "1.7.1"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080/v1"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Items",
+      "description": "Access and manage items inside 1Password Vaults"
+    },
+    {
+      "name": "Vaults",
+      "description": "Access 1Password Vaults"
+    },
+    {
+      "name": "Activity",
+      "description": "Access API Request Activity"
+    }
+  ],
+  "paths": {
+    "/activity": {
+      "get": {
+        "tags": [
+          "Activity"
+        ],
+        "summary": "Retrieve a list of API Requests that have been made.",
+        "operationId": "listApiActivity",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "How many API Events should be retrieved in a single request",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "integer",
+              "example": 10,
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "How far into the collection of API Events should the response start",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "integer",
+              "example": 50,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "Content-Range": {
+                "description": "An decription of what part of the collection has been returned as well as the total size.",
+                "style": "simple",
+                "explode": false,
+                "schema": {
+                  "type": "string",
+                  "example": "1-50/1134"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/APIRequest"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 401,
+                  "message": "Invalid token signature"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ConnectToken": []
+          }
+        ]
+      }
+    },
+    "/vaults": {
+      "get": {
+        "tags": [
+          "Vaults"
+        ],
+        "summary": "Get all Vaults",
+        "operationId": "listVaults",
+        "parameters": [
+          {
+            "name": "filter",
+            "in": "query",
+            "description": "Filter the Vault collection based on Vault name using SCIM eq filter",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "string",
+              "example": "name eq \"Some Vault Name\""
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Vault"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 401,
+                  "message": "Invalid token signature"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ConnectToken": []
+          }
+        ]
+      }
+    },
+    "/vaults/{vaultUuid}": {
+      "get": {
+        "tags": [
+          "Vaults"
+        ],
+        "summary": "Get Vault details and metadata",
+        "operationId": "getVault",
+        "parameters": [
+          {
+            "name": "vaultUuid",
+            "in": "path",
+            "description": "The UUID of the Vault to fetch Items from",
+            "required": true,
+            "style": "simple",
+            "explode": false,
+            "schema": {
+              "pattern": "^[\\da-z]{26}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Vault"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 401,
+                  "message": "Invalid token signature"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Unauthorized access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 403,
+                  "message": "vault {vaultUuid} is not in scope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Vault not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 404,
+                  "message": "vault {itemUuid} not found"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ConnectToken": []
+          }
+        ]
+      }
+    },
+    "/vaults/{vaultUuid}/items": {
+      "get": {
+        "tags": [
+          "Items"
+        ],
+        "summary": "Get all items for inside a Vault",
+        "operationId": "listItems",
+        "parameters": [
+          {
+            "name": "vaultUuid",
+            "in": "path",
+            "description": "The UUID of the Vault to fetch Items from",
+            "required": true,
+            "style": "simple",
+            "explode": false,
+            "schema": {
+              "pattern": "^[\\da-z]{26}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "description": "Filter the Item collection based on Item name using SCIM eq filter",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "string",
+              "example": "title eq \"Some Item Name\""
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Item"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 401,
+                  "message": "Invalid token signature"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Vault not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 404,
+                  "message": "vault {vaultUuid} not found"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ConnectToken": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Items"
+        ],
+        "summary": "Create a new Item",
+        "operationId": "createItem",
+        "parameters": [
+          {
+            "name": "vaultUuid",
+            "in": "path",
+            "description": "The UUID of the Vault to create an Item in",
+            "required": true,
+            "style": "simple",
+            "explode": false,
+            "schema": {
+              "pattern": "^[\\da-z]{26}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "The Item to create, including its fields, sections and URLs",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FullItem"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FullItem"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unable to create item due to invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 400,
+                  "message": "Invalid item category"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 401,
+                  "message": "Invalid token signature"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Unauthorized access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 403,
+                  "message": "vault {vaultUuid} is not in scope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "vaultNotFound": {
+                    "summary": "Vault not found",
+                    "value": {
+                      "status": 404,
+                      "message": "vault {vaultUuid} not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ConnectToken": []
+          }
+        ]
+      }
+    },
+    "/vaults/{vaultUuid}/items/{itemUuid}": {
+      "get": {
+        "tags": [
+          "Items"
+        ],
+        "summary": "Get the details of an Item",
+        "operationId": "getItem",
+        "parameters": [
+          {
+            "name": "vaultUuid",
+            "in": "path",
+            "description": "The UUID of the Vault to fetch Item from",
+            "required": true,
+            "style": "simple",
+            "explode": false,
+            "schema": {
+              "pattern": "^[\\da-z]{26}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemUuid",
+            "in": "path",
+            "description": "The UUID of the Item to fetch",
+            "required": true,
+            "style": "simple",
+            "explode": false,
+            "schema": {
+              "pattern": "^[\\da-z]{26}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FullItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 401,
+                  "message": "Invalid token signature"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Unauthorized access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 403,
+                  "message": "vault {vaultUuid} is not in scope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "itemNotFound": {
+                    "summary": "Item not found",
+                    "value": {
+                      "status": 404,
+                      "message": "item {itemUuid} not found"
+                    }
+                  },
+                  "vaultNotFound": {
+                    "summary": "Vault not found",
+                    "value": {
+                      "status": 404,
+                      "message": "vault {vaultUuid} not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ConnectToken": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Items"
+        ],
+        "summary": "Update an Item",
+        "operationId": "updateItem",
+        "parameters": [
+          {
+            "name": "vaultUuid",
+            "in": "path",
+            "description": "The UUID of the Item's Vault",
+            "required": true,
+            "style": "simple",
+            "explode": false,
+            "schema": {
+              "pattern": "^[\\da-z]{26}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemUuid",
+            "in": "path",
+            "description": "The UUID of the Item to update",
+            "required": true,
+            "style": "simple",
+            "explode": false,
+            "schema": {
+              "pattern": "^[\\da-z]{26}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "The complete Item to store in place of the existing one",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FullItem"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FullItem"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unable to create item due to invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 400,
+                  "message": "The item doesn't have a {example field name} field."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 401,
+                  "message": "Invalid token signature"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Unauthorized access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 403,
+                  "message": "vault {vaultUuid} is not in scope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "itemNotFound": {
+                    "summary": "Item not found",
+                    "value": {
+                      "status": 404,
+                      "message": "item {itemUuid} not found"
+                    }
+                  },
+                  "vaultNotFound": {
+                    "summary": "Vault not found",
+                    "value": {
+                      "status": 404,
+                      "message": "vault {vaultUuid} not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ConnectToken": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Items"
+        ],
+        "summary": "Delete an Item",
+        "operationId": "deleteItem",
+        "parameters": [
+          {
+            "name": "vaultUuid",
+            "in": "path",
+            "description": "The UUID of the Vault the item is in",
+            "required": true,
+            "style": "simple",
+            "explode": false,
+            "schema": {
+              "pattern": "^[\\da-z]{26}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemUuid",
+            "in": "path",
+            "description": "The UUID of the Item to update",
+            "required": true,
+            "style": "simple",
+            "explode": false,
+            "schema": {
+              "pattern": "^[\\da-z]{26}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully deleted an item"
+          },
+          "401": {
+            "description": "Invalid or missing token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 401,
+                  "message": "Invalid token signature"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Unauthorized access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 403,
+                  "message": "vault {vaultUuid} is not in scope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "vaultNotFound": {
+                    "summary": "Vault not found",
+                    "value": {
+                      "status": 404,
+                      "message": "vault {vaultUuid} not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ConnectToken": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Items"
+        ],
+        "summary": "Update a subset of Item attributes",
+        "description": "Applies a modified [RFC6902 JSON Patch](https://tools.ietf.org/html/rfc6902) document to an Item or ItemField. This endpoint only supports `add`, `remove` and `replace` operations.\n\nWhen modifying a specific ItemField, the ItemField's ID in the `path` attribute of the operation object: `/fields/{fieldId}`\n",
+        "operationId": "patchItem",
+        "parameters": [
+          {
+            "name": "vaultUuid",
+            "in": "path",
+            "description": "The UUID of the Vault the item is in",
+            "required": true,
+            "style": "simple",
+            "explode": false,
+            "schema": {
+              "pattern": "^[\\da-z]{26}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemUuid",
+            "in": "path",
+            "description": "The UUID of the Item to update",
+            "required": true,
+            "style": "simple",
+            "explode": false,
+            "schema": {
+              "pattern": "^[\\da-z]{26}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "The list of patch operations to apply to the Item",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchItemRequest"
+              },
+              "examples": {
+                "ReplaceAllAttributes": {
+                  "summary": "Replace an entire Item with new fields. Equivalent to a PUT request.",
+                  "value": [
+                    {
+                      "op": "replace",
+                      "path": "/",
+                      "value": {
+                        "title": "New Title",
+                        "favorite": true,
+                        "tags": [
+                          "tag1",
+                          "tag2"
+                        ],
+                        "...": "Any attr from FullItem schema"
+                      }
+                    }
+                  ]
+                },
+                "PatchItemAttr": {
+                  "summary": "Update specific Item attributes",
+                  "value": [
+                    {
+                      "op": "replace",
+                      "path": "/favorite",
+                      "value": true
+                    },
+                    {
+                      "op": "remove",
+                      "path": "/tags/1"
+                    }
+                  ]
+                },
+                "PatchItemField": {
+                  "summary": "Add a new ItemField to the Item",
+                  "value": [
+                    {
+                      "op": "add",
+                      "path": "/fields",
+                      "value": {
+                        "label": "New Field",
+                        "type": "string",
+                        "value": "hunter2"
+                      }
+                    }
+                  ]
+                },
+                "PatchItemFieldWithID": {
+                  "summary": "Modify or remove an ItemField.",
+                  "value": [
+                    {
+                      "op": "replace",
+                      "path": "/fields/r9qxq7xnhfhukoxsc8ymqr0y11",
+                      "value": {
+                        "label": "Replacement Title",
+                        "type": "string",
+                        "value": "new value"
+                      }
+                    },
+                    {
+                      "op": "remove",
+                      "path": "/fields/h2nl155dshi043yse7wa3u1hs7"
+                    }
+                  ]
+                },
+                "PatchItemFieldAttr": {
+                  "summary": "Modify a specific ItemField attribute.",
+                  "value": [
+                    {
+                      "op": "add",
+                      "path": "/fields/s2ju540zlna8bdj4uro7sj64rk/label",
+                      "value": "New field name"
+                    },
+                    {
+                      "op": "remove",
+                      "path": "/fields/s2ju540zlna8bdj4uro7sj64rk/value"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK - Item updated. If no Patch operations were provided, Item is unmodified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FullItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 401,
+                  "message": "Invalid token signature"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Unauthorized access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 403,
+                  "message": "vault {vaultUuid} is not in scope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "itemNotFound": {
+                    "summary": "Item not found",
+                    "value": {
+                      "status": 404,
+                      "message": "item {itemUuid} not found"
+                    }
+                  },
+                  "vaultNotFound": {
+                    "summary": "Vault not found",
+                    "value": {
+                      "status": 404,
+                      "message": "vault {vaultUuid} not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ConnectToken": []
+          }
+        ]
+      }
+    },
+    "/vaults/{vaultUuid}/items/{itemUuid}/files": {
+      "get": {
+        "tags": [
+          "Files"
+        ],
+        "summary": "Get all the files inside an Item",
+        "operationId": "listItemFiles",
+        "parameters": [
+          {
+            "name": "vaultUuid",
+            "in": "path",
+            "description": "The UUID of the Vault to fetch Items from",
+            "required": true,
+            "style": "simple",
+            "explode": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "itemUuid",
+            "in": "path",
+            "description": "The UUID of the Item to fetch files from",
+            "required": true,
+            "style": "simple",
+            "explode": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "inline_files",
+            "in": "query",
+            "description": "Tells server to return the base64-encoded file contents in the response",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "boolean",
+              "example": true
+            },
+            "x-ballerina-name": "inlineFiles"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/File"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 401,
+                  "message": "Invalid token signature"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "itemNotFound": {
+                    "summary": "Item not found",
+                    "value": {
+                      "status": 404,
+                      "message": "item {itemUuid} not found"
+                    }
+                  },
+                  "vaultNotFound": {
+                    "summary": "Vault not found",
+                    "value": {
+                      "status": 404,
+                      "message": "vault {vaultUuid} not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "File content too large to display",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "fileTooLarge": {
+                    "summary": "File too large",
+                    "value": {
+                      "status": 413,
+                      "message": "File is too large to inline in request. Use the /v1/vaults/{vaultUUID}/items/{itemUUID}/files/{fileUUID}/content endpoint instead."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ConnectToken": []
+          }
+        ]
+      }
+    },
+    "/vaults/{vaultUuid}/items/{itemUuid}/files/{fileUuid}": {
+      "get": {
+        "tags": [
+          "Files"
+        ],
+        "summary": "Get the details of a File",
+        "operationId": "getItemFile",
+        "parameters": [
+          {
+            "name": "vaultUuid",
+            "in": "path",
+            "description": "The UUID of the Vault to fetch Item from",
+            "required": true,
+            "style": "simple",
+            "explode": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "itemUuid",
+            "in": "path",
+            "description": "The UUID of the Item to fetch File from",
+            "required": true,
+            "style": "simple",
+            "explode": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "fileUuid",
+            "in": "path",
+            "description": "The UUID of the File to fetch",
+            "required": true,
+            "style": "simple",
+            "explode": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "inline_files",
+            "in": "query",
+            "description": "Tells server to return the base64-encoded file contents in the response",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "boolean",
+              "example": true
+            },
+            "x-ballerina-name": "inlineFiles"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/File"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 401,
+                  "message": "Invalid token signature"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Unauthorized access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 403,
+                  "message": "vault {vaultUuid} is not in scope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "File not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "fileNotFound": {
+                    "summary": "File not found",
+                    "value": {
+                      "status": 404,
+                      "message": "file {fileUuid} not found"
+                    }
+                  },
+                  "itemNotFound": {
+                    "summary": "Item not found",
+                    "value": {
+                      "status": 404,
+                      "message": "item {itemUuid} not found"
+                    }
+                  },
+                  "vaultNotFound": {
+                    "summary": "Vault not found",
+                    "value": {
+                      "status": 404,
+                      "message": "vault {vaultUuid} not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "File content too large to display",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "fileTooLarge": {
+                    "summary": "File too large",
+                    "value": {
+                      "status": 413,
+                      "message": "File is too large to inline in request. Use the /v1/vaults/{vaultUUID}/items/{itemUUID}/files/{fileUUID}/content endpoint instead."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ConnectToken": []
+          }
+        ]
+      }
+    },
+    "/vaults/{vaultUuid}/items/{itemUuid}/files/{fileUuid}/content": {
+      "get": {
+        "tags": [
+          "Files"
+        ],
+        "summary": "Get the content of a File",
+        "operationId": "downloadItemFile",
+        "responses": {
+          "200": {
+            "description": "The raw content of the file",
+            "headers": {
+              "Content-Disposition": {
+                "style": "simple",
+                "explode": false,
+                "schema": {
+                  "type": "string",
+                  "example": "attachment; filename=\"privkey.pem\""
+                }
+              },
+              "Content-Length": {
+                "style": "simple",
+                "explode": false,
+                "schema": {
+                  "type": "string",
+                  "example": "6432"
+                }
+              }
+            },
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": 401,
+                  "message": "Invalid token signature"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "File not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "fileNotFound": {
+                    "summary": "File not found",
+                    "value": {
+                      "status": 404,
+                      "message": "file {fileUuid} not found"
+                    }
+                  },
+                  "itemNotFound": {
+                    "summary": "Item not found",
+                    "value": {
+                      "status": 404,
+                      "message": "item {itemUuid} not found"
+                    }
+                  },
+                  "vaultNotFound": {
+                    "summary": "Vault not found",
+                    "value": {
+                      "status": 404,
+                      "message": "vault {vaultUuid} not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ConnectToken": []
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "name": "vaultUuid",
+          "in": "path",
+          "description": "The UUID of the Vault the item is in",
+          "required": true,
+          "style": "simple",
+          "explode": false,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "itemUuid",
+          "in": "path",
+          "description": "The UUID of the Item the File is in",
+          "required": true,
+          "style": "simple",
+          "explode": false,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "fileUuid",
+          "in": "path",
+          "description": "UUID of the file to get content from",
+          "required": true,
+          "style": "simple",
+          "explode": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "/heartbeat": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Ping the server for liveness",
+        "operationId": "getHeartbeat",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "."
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:8080"
+          }
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Get state of the server and its dependencies.",
+        "operationId": "getServerHealth",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerHealth"
+                },
+                "examples": {
+                  "WaitingForAPIRequest": {
+                    "summary": "API server waiting for first authenticated request",
+                    "value": {
+                      "name": "1Password Connect API",
+                      "version": "1.2.1",
+                      "dependencies": [
+                        {
+                          "service": "sync",
+                          "status": "TOKEN_NEEDED"
+                        },
+                        {
+                          "service": "sqlite",
+                          "status": "ACTIVE",
+                          "message": "Connected to./1password.sqlite"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:8080"
+          }
+        ]
+      }
+    },
+    "/metrics": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "summary": "Query server for exposed Prometheus metrics",
+        "description": "See Prometheus documentation for a complete data model.",
+        "operationId": "getPrometheusMetrics",
+        "responses": {
+          "200": {
+            "description": "Successfully returned Prometheus metrics",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "# HELP go_gc_duration_seconds A summary of the pause duration of garbage collection cycles.\n# TYPE go_gc_duration_seconds summary\ngo_gc_duration_seconds{quantile=\"0\"} 2.9153e-05\ngo_gc_duration_seconds{quantile=\"0.25\"} 6.2832e-05\ngo_gc_duration_seconds{quantile=\"0.5\"} 9.7187e-05\ngo_gc_duration_seconds{quantile=\"0.75\"} 0.000112967\ngo_gc_duration_seconds{quantile=\"1\"} 0.000215819\ngo_gc_duration_seconds_sum 0.001376862\ngo_gc_duration_seconds_count 14\n"
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:8080"
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "APIRequestResourceVault": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^[\\da-z]{26}$",
+            "type": "string",
+            "description": "The unique id of the vault"
+          }
+        },
+        "description": "The vault the request accessed"
+      },
+      "APIRequestResource": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/APIRequestResourceItem"
+          },
+          "itemVersion": {
+            "type": "integer",
+            "description": "The version of the item the request accessed"
+          },
+          "type": {
+            "type": "string",
+            "description": "Whether the request accessed an item or a vault",
+            "enum": [
+              "ITEM",
+              "VAULT"
+            ]
+          },
+          "vault": {
+            "$ref": "#/components/schemas/APIRequestResourceVault"
+          }
+        },
+        "description": "The vault or item the request accessed"
+      },
+      "FullItem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Item"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "files": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/File"
+                }
+              },
+              "fields": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Field"
+                }
+              },
+              "sections": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ServerHealth": {
+        "required": [
+          "name",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string",
+            "description": "The Connect server's version"
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServiceDependency"
+            }
+          }
+        }
+      },
+      "APIRequestResourceItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^[\\da-z]{26}$",
+            "type": "string",
+            "description": "The unique id of the item"
+          }
+        },
+        "description": "The item the request accessed"
+      },
+      "FileSection": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The unique id of the section"
+          }
+        },
+        "description": "For files that are in a section, this field describes the section"
+      },
+      "APIRequestActor": {
+        "type": "object",
+        "properties": {
+          "userAgent": {
+            "type": "string",
+            "description": "The user agent of the client that made the request"
+          },
+          "requestIp": {
+            "type": "string",
+            "description": "The IP address the request came from"
+          },
+          "id": {
+            "type": "string",
+            "description": "The unique id of the token that made the request",
+            "format": "uuid"
+          },
+          "account": {
+            "type": "string",
+            "description": "The id of the 1Password account the token belongs to"
+          },
+          "jti": {
+            "type": "string",
+            "description": "The unique id of the token, as in the JWT `jti` claim"
+          }
+        },
+        "description": "The token and client that made the request"
+      },
+      "PatchInner": {
+        "required": [
+          "op",
+          "path"
+        ],
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "add",
+              "remove",
+              "replace"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "description": "An RFC6901 JSON Pointer pointing to the Item document, an Item Attribute, and Item Field by Field ID, or an Item Field Attribute",
+            "example": "/fields/06gnn2b95example10q91512p5/label"
+          },
+          "value": {
+            "description": "The new value for the attribute or field. It can be any JSON value"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "A message detailing the error"
+          },
+          "status": {
+            "type": "integer",
+            "description": "HTTP Status Code"
+          }
+        }
+      },
+      "APIRequest": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string",
+            "description": "Whether the request was allowed or denied",
+            "enum": [
+              "SUCCESS",
+              "DENY"
+            ]
+          },
+          "actor": {
+            "$ref": "#/components/schemas/APIRequestActor"
+          },
+          "resource": {
+            "$ref": "#/components/schemas/APIRequestResource"
+          },
+          "requestId": {
+            "type": "string",
+            "description": "The unique id used to identify a single request",
+            "format": "uuid"
+          },
+          "action": {
+            "type": "string",
+            "description": "The action that was performed on the resource",
+            "enum": [
+              "READ",
+              "CREATE",
+              "UPDATE",
+              "DELETE"
+            ]
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "The time at which the request was processed by the server",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "description": "Represents a request that was made to the API. Including what Token was used and what resource was accessed"
+      },
+      "Item": {
+        "required": [
+          "category",
+          "vault"
+        ],
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "urls": {
+            "type": "array",
+            "example": [
+              {
+                "primary": true,
+                "href": "https://example.com"
+              },
+              {
+                "href": "https://example.org"
+              }
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ItemUrls"
+            }
+          },
+          "id": {
+            "pattern": "^[\\da-z]{26}$",
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "readOnly": true,
+            "enum": [
+              "ARCHIVED",
+              "DELETED"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "LOGIN",
+              "PASSWORD",
+              "API_CREDENTIAL",
+              "SERVER",
+              "DATABASE",
+              "CREDIT_CARD",
+              "MEMBERSHIP",
+              "PASSPORT",
+              "SOFTWARE_LICENSE",
+              "OUTDOOR_LICENSE",
+              "SECURE_NOTE",
+              "WIRELESS_ROUTER",
+              "BANK_ACCOUNT",
+              "DRIVER_LICENSE",
+              "IDENTITY",
+              "REWARD_PROGRAM",
+              "DOCUMENT",
+              "EMAIL_ACCOUNT",
+              "SOCIAL_SECURITY_NUMBER",
+              "MEDICAL_RECORD",
+              "SSH_KEY",
+              "CUSTOM"
+            ]
+          },
+          "favorite": {
+            "type": "boolean",
+            "default": false
+          },
+          "version": {
+            "type": "integer"
+          },
+          "vault": {
+            "$ref": "#/components/schemas/ItemVault"
+          },
+          "lastEditedBy": {
+            "type": "string",
+            "readOnly": true
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        }
+      },
+      "Field": {
+        "required": [
+          "id",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "entropy": {
+            "type": "number",
+            "description": "For fields with a purpose of `PASSWORD` this is the entropy of the value",
+            "readOnly": true
+          },
+          "purpose": {
+            "type": "string",
+            "description": "Some item types, Login and Password, have fields used for autofill. This property indicates that purpose and is required for some item types",
+            "enum": [
+              "",
+              "USERNAME",
+              "PASSWORD",
+              "NOTES"
+            ]
+          },
+          "recipe": {
+            "$ref": "#/components/schemas/GeneratorRecipe"
+          },
+          "section": {
+            "$ref": "#/components/schemas/FieldSection"
+          },
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "STRING",
+              "EMAIL",
+              "CONCEALED",
+              "URL",
+              "TOTP",
+              "DATE",
+              "MONTH_YEAR",
+              "MENU"
+            ],
+            "default": "STRING"
+          },
+          "value": {
+            "type": "string"
+          },
+          "generate": {
+            "type": "boolean",
+            "description": "If value is not present then a new value should be generated for this field",
+            "default": false
+          }
+        }
+      },
+      "ItemVault": {
+        "required": [
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^[\\da-z]{26}$",
+            "type": "string"
+          }
+        }
+      },
+      "Vault": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "attributeVersion": {
+            "type": "integer",
+            "description": "The vault version"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "pattern": "^[\\da-z]{26}$",
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "USER_CREATED",
+              "PERSONAL",
+              "EVERYONE",
+              "TRANSFER"
+            ]
+          },
+          "contentVersion": {
+            "type": "integer",
+            "description": "The version of the vault contents"
+          },
+          "items": {
+            "type": "integer",
+            "description": "Number of active items in the vault"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        }
+      },
+      "ServiceDependency": {
+        "type": "object",
+        "properties": {
+          "service": {
+            "type": "string",
+            "description": "The name of the dependent service"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable message for explaining the current state"
+          },
+          "status": {
+            "type": "string",
+            "description": "The state of the dependent service, for example ACTIVE"
+          }
+        },
+        "description": "The state of a registered server dependency"
+      },
+      "File": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "description": "Size in bytes of the file"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the file"
+          },
+          "content_path": {
+            "type": "string",
+            "description": "Path of the Connect API that can be used to download the contents of this file",
+            "readOnly": true,
+            "x-ballerina-name": "contentPath"
+          },
+          "section": {
+            "$ref": "#/components/schemas/FileSection"
+          },
+          "id": {
+            "type": "string",
+            "description": "ID of the file"
+          },
+          "content": {
+            "type": "string",
+            "description": "Base64-encoded contents of the file. Only set if size <= OP_MAX_INLINE_FILE_SIZE_KB kb and `inline_files` is set to `true`",
+            "format": "byte"
+          }
+        },
+        "example": {
+          "id": "6r65pjq33banznomn7q22sj44e",
+          "name": "foo.txt",
+          "size": 35,
+          "content_path": "v1/vaults/ionaiwtdvgclrixbt6ztpqcxnq/items/p7eflcy7f5mk7vg6zrzf5rjjyu/files/6r65pjq33banznomn7q22sj44e/content",
+          "content": "VGhlIGZ1dHVyZSBiZWxvbmdzIHRvIHRoZSBjdXJpb3VzLgo="
+        }
+      },
+      "PatchItemRequest": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/PatchInner"
+        }
+      },
+      "ItemUrls": {
+        "required": [
+          "href"
+        ],
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "href": {
+            "type": "string",
+            "format": "url"
+          },
+          "primary": {
+            "type": "boolean"
+          }
+        }
+      },
+      "FieldSection": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "GeneratorRecipe": {
+        "type": "object",
+        "properties": {
+          "characterSets": {
+            "maximum": 3,
+            "minimum": 0,
+            "uniqueItems": true,
+            "type": "array",
+            "description": "The character sets used to generate the value",
+            "items": {
+              "type": "string",
+              "enum": [
+                "LETTERS",
+                "DIGITS",
+                "SYMBOLS"
+              ]
+            }
+          },
+          "length": {
+            "maximum": 64,
+            "minimum": 1,
+            "type": "integer",
+            "description": "Length of the generated value",
+            "default": 32
+          },
+          "excludeCharacters": {
+            "type": "string",
+            "description": "List of all characters that should be excluded from generated passwords",
+            "example": "abc1"
+          }
+        },
+        "description": "The recipe is used in conjunction with the \"generate\" property to set the character set used to generate a new secure value"
+      }
+    },
+    "securitySchemes": {
+      "ConnectToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}
